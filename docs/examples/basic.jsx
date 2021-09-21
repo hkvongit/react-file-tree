@@ -1,37 +1,70 @@
+/* eslint-disable */
 /* eslint-disable no-alert, no-console, react/no-find-dom-node */
 import React from 'react';
+import Tree, { TreeNode } from 'rc-tree';
+import { ListGroup, ButtonGroup, Button } from 'react-bootstrap'
+import ReactDOM from 'react-dom';
+import Tooltip from 'rc-tooltip'
 import '../../assets/index.less';
 import './basic.less';
-import Tree, { TreeNode } from 'rc-tree';
+// import './basic.scss';
+// import '../index.scss';
 
-const treeData = [
+const treeDataDummy = [
   {
-    key: '0-0',
+    key: 'parent 1',
     title: 'parent 1',
-    children: [
-      { key: '0-0-0', title: 'parent 1-1', children: [{ key: '0-0-0-0', title: 'parent 1-1-0' }] },
+    isLeaf: false,
+    contextMenu: [
       {
-        key: '0-0-1',
-        title: 'parent 1-2',
-        children: [
-          { key: '0-0-1-0', title: 'parent 1-2-0', disableCheckbox: true },
-          { key: '0-0-1-1', title: 'parent 1-2-1' },
-          { key: '0-0-1-2', title: 'parent 1-2-2' },
-          { key: '0-0-1-3', title: 'parent 1-2-3' },
-          { key: '0-0-1-4', title: 'parent 1-2-4' },
-          { key: '0-0-1-5', title: 'parent 1-2-5' },
-          { key: '0-0-1-6', title: 'parent 1-2-6' },
-          { key: '0-0-1-7', title: 'parent 1-2-7' },
-          { key: '0-0-1-8', title: 'parent 1-2-8' },
-          { key: '0-0-1-9', title: 'parent 1-2-9' },
-          { key: 1128, title: 1128 },
+        label: 'Add',
+        value: 'addNewNode',
+      },
+      {
+        label: 'Upload',
+        value: 'uploadNodeData',
+      },
+    ],
+    children: [
+      {
+        key: 'parent-1/parent 1-1-0', title: 'parent 1-1-0', contextMenu: [
+          {
+            label: 'Rename',
+            value: 'renameNode',
+          },
+          {
+            label: 'Delete',
+            value: 'deleteNode',
+          },
         ],
+      },
+      {
+        key: 'parent-1/parent 1-2-0', title: 'parent 1-2-0', contextMenu: [
+          {
+            label: 'Rename',
+            value: 'renameNode',
+          },
+          {
+            label: 'Delete',
+            value: 'deleteNode',
+          },
+        ],
+      },
+    ],
+  },
+  {
+    key: '0-0-1',
+    title: 'parent 1-2',
+    children: [
+      { key: '0-0-1-0', title: 'parent 1-2-0', disableCheckbox: true },
+      {
+        key: '0-0-1-1', title: 'parent 1-2-1',
       },
     ],
   },
 ];
 
-class Demo extends React.Component {
+class RcTreeBasic extends React.Component {
   static defaultProps = {
     keys: ['0-0-0-0'],
   };
@@ -43,42 +76,190 @@ class Demo extends React.Component {
       defaultExpandedKeys: keys,
       defaultSelectedKeys: keys,
       defaultCheckedKeys: keys,
+      treeDataState: treeDataDummy
     };
 
     this.treeRef = React.createRef();
   }
+  componentDidMount() {
+    this.getContainer();
+  }
 
-  onExpand = expandedKeys => {
-    console.log('onExpand', expandedKeys);
+  componentWillUnmount() {
+    if (this.cmContainer) {
+      ReactDOM.unmountComponentAtNode(this.cmContainer);
+      document.body.removeChild(this.cmContainer);
+      this.cmContainer = null;
+    }
+  }
+  onRightClick = info => {
+  };
+
+  getContainer() {
+    if (!this.cmContainer) {
+      this.cmContainer = document.createElement('div');
+      document.body.appendChild(this.cmContainer);
+    }
+    return this.cmContainer;
+  }
+
+  renderCm(info) {
+    if (this.toolTip) {
+      ReactDOM.unmountComponentAtNode(this.cmContainer);
+      this.toolTip = null;
+    }
+    this.toolTip = (
+      <Tooltip
+        id="overlay-example"
+        trigger="click"
+        placement="bottomLeft"
+        prefixCls="rc-tree-contextmenu"
+        defaultVisible
+        overlay={
+          <ListGroup vertical>
+            {info.node?.contextMenu?.map((item) => {
+              return <ListGroup.Item as="button" onClick={() => {
+                ReactDOM.unmountComponentAtNode(this.cmContainer);
+                item.action()
+              }}>{item.label}</ListGroup.Item>
+            })}
+          </ListGroup>
+        }
+      >
+        <span />
+      </Tooltip>
+    );
+    const container = this.getContainer();
+    Object.assign(this.cmContainer.style, {
+      position: 'absolute',
+      left: `${info.event.pageX}px`,
+      top: `${info.event.pageY}px`,
+    });
+
+    ReactDOM.render(this.toolTip, container);
+  }
+  onExpand = (expandedKeys) => {
   };
 
   onSelect = (selectedKeys, info) => {
-    console.log('selected', selectedKeys, info);
     this.selKey = info.node.props.eventKey;
   };
 
   onCheck = (checkedKeys, info) => {
-    console.log('onCheck', checkedKeys, info);
   };
 
   onEdit = () => {
-    setTimeout(() => {
-      console.log('current key: ', this.selKey);
-    }, 0);
   };
 
-  onDel = e => {
+  onDel = (e) => {
     if (!window.confirm('sure to delete?')) {
       return;
     }
     e.stopPropagation();
   };
 
-  setTreeRef = tree => {
+  setTreeRef = (tree) => {
     this.tree = tree;
   };
 
+  filterNodeList = (nodeList, nodeKey) => {
+    let filteredList = []
+    if (Array.isArray(nodeList) && nodeList.length > 0) {
+      nodeList.forEach((node) => {
+        if (node.key !== nodeKey) {
+          if (Array.isArray(node.children)) {
+            let children = []
+            node.children.forEach((childNode) => {
+              if (childNode.key !== nodeKey) {
+                children.push(childNode)
+              }
+            })
+            node.children = children
+          }
+          filteredList.push(node)
+        }
+      })
+    }
+    return filteredList
+  }
+
+  handleNodeRename = (nodeKey, newName) => {
+    if (newName == "new") {
+      throw "File name already exist";
+    }
+    else {
+      const nodeList = this.state.treeDataState
+      let modifiedList = []
+      if (Array.isArray(nodeList) && nodeList.length > 0) {
+        nodeList.forEach((node) => {
+          if (node.key === nodeKey) {
+            // TODO - modify the key and activeFileKey if the Node is active one.
+            node.title = newName;
+
+          }
+          if (Array.isArray(node.children)) {
+            let children = []
+            node.children.forEach((childNode) => {
+              if (childNode.key === nodeKey) {
+                childNode.title = newName;
+              }
+              children.push(childNode)
+            })
+            node.children = children
+          }
+          modifiedList.push(node)
+        })
+      }
+      this.setState({ treeDataState: modifiedList })
+    }
+
+  }
+
+  handleAddNewFile = (parentNodeKey, nodeName) => {
+    if (nodeName === "new") {
+      throw "File name already exist"
+    }
+    const nodeList = this.state.treeDataState
+    let modifiedList = []
+    if (Array.isArray(nodeList) && nodeList.length > 0) {
+      nodeList.forEach((node) => {
+        if (node.key === parentNodeKey && Array.isArray(node.children)) {
+          node.children.unshift({
+            key: `${node.title}/${nodeName}`, title: nodeName,
+            contextMenu: [
+              {
+                label: 'Rename',
+                action: () => {
+                  console.log('Rename file action');
+                },
+              },
+              {
+                label: 'Delete',
+                action: () => {
+                  console.log('Delete file action');
+                },
+              },
+            ],
+          })
+        }
+        modifiedList.push(node)
+      })
+    }
+    this.setState({ treeDataState: modifiedList })
+  }
+
+  handleChildDel = (childNodeKey) => {
+
+    const newTreeDataState = this.filterNodeList(this.state.treeDataState, childNodeKey)
+    this.setState({ treeDataState: newTreeDataState })
+  }
+
+  handleUploadNodeData = (parentNodeKey) => {
+  }
+
   render() {
+    // const { treeData } = this.props
+    const treeData = this.state.treeDataState
     const customLabel = (
       <span className="cus-label">
         <span>operations: </span>
@@ -86,7 +267,7 @@ class Demo extends React.Component {
           Edit
         </span>
         &nbsp;
-        <label onClick={e => e.stopPropagation()}>
+        <label onClick={(e) => e.stopPropagation()}>
           <input type="checkbox" /> checked
         </label>
         &nbsp;
@@ -95,10 +276,9 @@ class Demo extends React.Component {
         </span>
       </span>
     );
-
     return (
       <div style={{ margin: '0 20px' }}>
-        <h2>simple</h2>
+        {/* <h2>simple</h2>
         <input aria-label="good" />
         <Tree
           ref={this.setTreeRef}
@@ -112,7 +292,7 @@ class Demo extends React.Component {
           defaultCheckedKeys={this.state.defaultCheckedKeys}
           onSelect={this.onSelect}
           onCheck={this.onCheck}
-          onActiveChange={key => console.log('Active:', key)}
+          onActiveChange={(key) => console.log('Active:', key)}
         >
           <TreeNode title="parent 1" key="0-0">
             <TreeNode title={customLabel} key="0-0-0">
@@ -143,19 +323,26 @@ class Demo extends React.Component {
           onSelect={this.onSelect}
           onCheck={this.onCheck}
           treeData={treeData}
-        />
+        /> */}
 
-        <h2>Select</h2>
+        {/* <h2>Select</h2> */}
         <Tree
+          // onRightClick={this.onRightClick}
           ref={this.treeRef}
           className="myCls"
           defaultExpandAll
           treeData={treeData}
           onSelect={this.onSelect}
           height={150}
+          selectedKeys={[this.props.activeFileKey]}
+          handleChildDel={this.handleChildDel}
+          handleNodeRename={this.handleNodeRename}
+          handleAddNewFile={this.handleAddNewFile}
+          handleUploadNodeData={this.handleUploadNodeData}
+          showLine
         />
 
-        <button
+        {/* <button
           type="button"
           onClick={() => {
             setTimeout(() => {
@@ -165,10 +352,10 @@ class Demo extends React.Component {
           }}
         >
           Scroll Last
-        </button>
+        </button> */}
       </div>
     );
   }
 }
 
-export default Demo;
+export default RcTreeBasic;

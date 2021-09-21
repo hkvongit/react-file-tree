@@ -170,6 +170,10 @@ export interface TreeProps {
 
   // direction for drag logic
   direction?: Direction;
+  handleChildDel?: (nodeKey: string | number) => void;
+  handleNodeRename?: (nodeKey: string | number, newName: string | number) => void;
+  handleAddNewFile?: (parentNodeKey: string | number, nodeName: string | number) => void;
+  handleUploadNodeData?: (parentNodeKey: string | number) => void;
 }
 
 interface TreeState {
@@ -1301,7 +1305,6 @@ class Tree extends React.Component<TreeProps, TreeState> {
       direction,
     } = this.props;
     const domProps: React.HTMLAttributes<HTMLDivElement> = getDataAndAria(this.props);
-
     return (
       <TreeContext.Provider
         value={{
@@ -1381,6 +1384,10 @@ class Tree extends React.Component<TreeProps, TreeState> {
             onScroll={onScroll}
             {...this.getTreeNodeRequiredProps()}
             {...domProps}
+            handleChildDel={this.props.handleChildDel}
+            handleNodeRename={this.props.handleNodeRename}
+            handleAddNewFile={this.props.handleAddNewFile}
+            handleUploadNodeData={this.props.handleUploadNodeData}
           />
         </div>
       </TreeContext.Provider>

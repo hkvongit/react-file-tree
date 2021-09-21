@@ -90,6 +90,10 @@ interface NodeListProps {
 
   onListChangeStart: () => void;
   onListChangeEnd: () => void;
+  handleChildDel?: (nodeKey: string | number) => void;
+  handleNodeRename?: (nodeKey: string | number, newName: string | number) => void;
+  handleAddNewFile?: (parentNodeKey: string | number, nodeName: string | number) => void;
+  handleUploadNodeData?: (parentNodeKey: string | number) => void;
 }
 
 /**
@@ -345,6 +349,18 @@ const RefNodeList: React.RefForwardingComponent<NodeListRef, NodeListProps> = (p
               onMouseMove={() => {
                 onActiveChange(null);
               }}
+              handleChildDel={props.handleChildDel}
+              handleNodeRename={newName => {
+                if (typeof props.handleNodeRename === 'function') {
+                  props.handleNodeRename(treeNode.key, newName);
+                }
+              }}
+              handleAddNewFile={nodeName => {
+                if (typeof props.handleAddNewFile === 'function') {
+                  props.handleAddNewFile(treeNode.key, nodeName);
+                }
+              }}
+              handleUploadNodeData={props.handleUploadNodeData}
             />
           );
         }}

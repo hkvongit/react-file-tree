@@ -1,16 +1,30 @@
 import * as React from 'react';
+import ReactDOM from 'react-dom';
 import classNames from 'classnames';
+import Tooltip from 'rc-tooltip';
 // @ts-ignore
 import { TreeContext, TreeContextProps } from './contextTypes';
 import { getDataAndAria } from './util';
 import { IconType, Key, DataNode } from './interface';
 import Indent from './Indent';
 import { convertNodePropsToEventData } from './utils/treeUtil';
+import './styles.less';
+import './treeNode.css';
 
 const ICON_OPEN = 'open';
 const ICON_CLOSE = 'close';
 
 const defaultTitle = '---';
+
+// Action constants
+const renameNode = 'renameNode';
+const addNewNode = 'addNewNode';
+const deleteNode = 'deleteNode';
+const uploadNodeData = 'uploadNodeData';
+
+// Keyboard Keys
+const enterKey = 'Enter';
+const escapeKey = 'Escape';
 
 export interface TreeNodeProps {
   eventKey?: Key; // Pass by parent `cloneElement`
@@ -47,6 +61,10 @@ export interface TreeNodeProps {
   icon?: IconType;
   switcherIcon?: IconType;
   children?: React.ReactNode;
+  handleChildDel?: (nodeKey: string | number) => void;
+  handleNodeRename?: (newName: string | number) => void;
+  handleAddNewFile?: (nodeName: string | number) => void;
+  handleUploadNodeData?: (nodeKey: string | number) => void;
 }
 
 export interface InternalTreeNodeProps extends TreeNodeProps {
@@ -55,20 +73,149 @@ export interface InternalTreeNodeProps extends TreeNodeProps {
 
 export interface TreeNodeState {
   dragNodeHighlight: boolean;
+  isRenameActive: boolean;
+  isInputOnFocus: boolean;
+  isNewNodeCreationActive: boolean;
+  renameActionError: null | string;
+  newNodeCreationError: null | string;
 }
 
 class InternalTreeNode extends React.Component<InternalTreeNodeProps, TreeNodeState> {
   public state = {
     dragNodeHighlight: false,
+    isRenameActive: false,
+    isInputOnFocus: false,
+    isNewNodeCreationActive: false,
+    renameActionError: null,
+    newNodeCreationError: null,
   };
 
+  renameInputRef = React.createRef<HTMLInputElement>();
+  newNodeRef = React.createRef<HTMLInputElement>();
+
   public selectHandle: HTMLSpanElement;
+
+  handleDOMKeyPress = event => {
+    if (event.key === 'Escape') {
+      this.setState({ isRenameActive: false, isNewNodeCreationActive: false });
+    }
+  };
+
+  handleDOMRightClick = () => {
+    if (!this.state.isInputOnFocus) {
+      this.setState({
+        isRenameActive: false,
+        isNewNodeCreationActive: false,
+        renameActionError: null,
+        newNodeCreationError: null,
+      });
+    }
+  };
+
+  contextMenuContainer = null;
+  toolTip = null;
+
+  getContainer = () => {
+    if (!this.contextMenuContainer) {
+      this.contextMenuContainer = document.createElement('div');
+      document.body.appendChild(this.contextMenuContainer);
+    }
+    return this.contextMenuContainer;
+  };
+
+  // Context menu that appear on right clicking on node
+  renderContextMenu = (event, nodeData) => {
+    if (this.toolTip) {
+      ReactDOM.unmountComponentAtNode(this.contextMenuContainer);
+      this.toolTip = null;
+    }
+
+    const handleAction = (action): void => {
+      switch (action) {
+        case renameNode:
+          this.setState({ isRenameActive: true });
+          setTimeout(() => {
+            this.renameInputRef.current?.focus();
+          }, 100);
+          break;
+        case addNewNode:
+          this.setState({ isNewNodeCreationActive: true });
+          setTimeout(() => {
+            this.newNodeRef.current?.focus();
+          }, 100);
+          break;
+        case deleteNode:
+          if (typeof this.props.handleChildDel === 'function') {
+            this.props.handleChildDel(nodeData.key);
+          }
+          break;
+        case uploadNodeData:
+          if (typeof this.props.handleUploadNodeData === 'function') {
+            this.props.handleUploadNodeData(nodeData.key);
+          }
+          break;
+        default:
+          console.info('Unhandled context menu option');
+      }
+    };
+
+    this.toolTip = (
+      <Tooltip
+        id="overlay-example"
+        trigger="click"
+        placement="bottomLeft"
+        prefixCls="rc-tree-contextmenu"
+        defaultVisible
+        overlay={
+          <div className="rc-context-container">
+            {nodeData?.contextMenu &&
+              nodeData?.contextMenu.map(item => {
+                return (
+                  <button
+                    className="rc-context-menu-button"
+                    onClick={() => {
+                      ReactDOM.unmountComponentAtNode(this.contextMenuContainer);
+                      handleAction(item.value);
+                    }}
+                  >
+                    {item.label}
+                  </button>
+                );
+              })}
+          </div>
+        }
+      >
+        <span />
+      </Tooltip>
+    );
+
+    const container = this.getContainer();
+
+    Object.assign(this.contextMenuContainer.style, {
+      position: 'absolute',
+      left: `${event.clientX + 5}px`,
+      top: `${event.clientY + 5}px`,
+    });
+
+    ReactDOM.render(this.toolTip, container);
+  };
+
+  onRightClick = (event, nodeData) => {
+    this.renderContextMenu(event, nodeData);
+  };
 
   // Isomorphic needn't load data in server side
   componentDidMount() {
     this.syncLoadData(this.props);
+    window.addEventListener('keydown', this.handleDOMKeyPress);
+    window.addEventListener('contextmenu', this.handleDOMRightClick);
+    this.getContainer();
   }
 
+  componentWillUnmount() {
+    window.removeEventListener('keydown', this.handleDOMKeyPress);
+    window.addEventListener('contextmenu', this.handleDOMRightClick);
+  }
   componentDidUpdate() {
     this.syncLoadData(this.props);
   }
@@ -459,20 +606,59 @@ class InternalTreeNode extends React.Component<InternalTreeNodeProps, TreeNodeSt
         className={classNames(
           `${wrapClass}`,
           `${wrapClass}-${this.getNodeState() || 'normal'}`,
-          !disabled && (selected || dragNodeHighlight) && `${prefixCls}-node-selected`,
+          !disabled &&
+            (selected || dragNodeHighlight) &&
+            `${prefixCls}-node-selected node-full-opaque`,
           !disabled && mergedDraggable && 'draggable',
         )}
         draggable={(!disabled && mergedDraggable) || undefined}
         aria-grabbed={(!disabled && mergedDraggable) || undefined}
         onMouseEnter={this.onMouseEnter}
         onMouseLeave={this.onMouseLeave}
-        onContextMenu={this.onContextMenu}
         onClick={this.onSelectorClick}
         onDoubleClick={this.onSelectorDoubleClick}
         onDragStart={mergedDraggable ? this.onDragStart : undefined}
       >
         {$icon}
-        {$title}
+        {!this.state.isRenameActive ? (
+          <>{$title}</>
+        ) : (
+          <>
+            <input
+              ref={this.renameInputRef}
+              type="text"
+              onKeyDown={e => {
+                switch (e.key) {
+                  case enterKey:
+                    try {
+                      this.props.handleNodeRename(this.renameInputRef.current?.value);
+                      this.setState({ isRenameActive: false, renameActionError: null });
+                    } catch (err) {
+                      this.setState({
+                        renameActionError: err.message ? err.message : JSON.stringify(err),
+                      });
+                    }
+                    break;
+                  case escapeKey:
+                    this.setState({ isRenameActive: false, renameActionError: null });
+                    break;
+                  default:
+                    return null;
+                }
+                return null;
+              }}
+              defaultValue={title.toString()}
+              onFocus={() => this.setState({ isInputOnFocus: true })}
+              onBlur={() => this.setState({ isInputOnFocus: false })}
+              required
+              minLength={1}
+              pattern="/[^a]/"
+            />
+            {this.state.renameActionError && (
+              <div className="input-error-container">{this.state.renameActionError}</div>
+            )}
+          </>
+        )}
         {this.renderDropIndicator()}
       </span>
     );
@@ -538,39 +724,102 @@ class InternalTreeNode extends React.Component<InternalTreeNodeProps, TreeNodeSt
     const isEndNode = isEnd[isEnd.length - 1];
     const mergedDraggable = typeof draggable === 'function' ? draggable(data) : draggable;
     return (
-      <div
-        ref={domRef}
-        className={classNames(className, `${prefixCls}-treenode`, {
-          [`${prefixCls}-treenode-disabled`]: disabled,
-          [`${prefixCls}-treenode-switcher-${expanded ? 'open' : 'close'}`]: !isLeaf,
-          [`${prefixCls}-treenode-checkbox-checked`]: checked,
-          [`${prefixCls}-treenode-checkbox-indeterminate`]: halfChecked,
-          [`${prefixCls}-treenode-selected`]: selected,
-          [`${prefixCls}-treenode-loading`]: loading,
-          [`${prefixCls}-treenode-active`]: active,
-          [`${prefixCls}-treenode-leaf-last`]: isEndNode,
+      <>
+        <div
+          ref={domRef}
+          className={classNames(className, `${prefixCls}-treenode`, {
+            [`${prefixCls}-treenode-disabled`]: disabled,
+            [`${prefixCls}-treenode-switcher-${expanded ? 'open' : 'close'}`]: !isLeaf,
+            [`${prefixCls}-treenode-checkbox-checked`]: checked,
+            [`${prefixCls}-treenode-checkbox-indeterminate`]: halfChecked,
+            [`${prefixCls}-treenode-selected`]: selected,
+            [`${prefixCls}-treenode-loading`]: loading,
+            [`${prefixCls}-treenode-active`]: active,
+            [`${prefixCls}-treenode-leaf-last`]: isEndNode,
 
-          'drop-target': dropTargetKey === eventKey,
-          'drop-container': dropContainerKey === eventKey,
-          'drag-over': !disabled && dragOver,
-          'drag-over-gap-top': !disabled && dragOverGapTop,
-          'drag-over-gap-bottom': !disabled && dragOverGapBottom,
-          'filter-node': filterTreeNode && filterTreeNode(convertNodePropsToEventData(this.props)),
-        })}
-        style={style}
-        onDragEnter={mergedDraggable ? this.onDragEnter : undefined}
-        onDragOver={mergedDraggable ? this.onDragOver : undefined}
-        onDragLeave={mergedDraggable ? this.onDragLeave : undefined}
-        onDrop={mergedDraggable ? this.onDrop : undefined}
-        onDragEnd={mergedDraggable ? this.onDragEnd : undefined}
-        onMouseMove={onMouseMove}
-        {...dataOrAriaAttributeProps}
-      >
-        <Indent prefixCls={prefixCls} level={level} isStart={isStart} isEnd={isEnd} />
-        {this.renderSwitcher()}
-        {this.renderCheckbox()}
-        {this.renderSelector()}
-      </div>
+            'drop-target': dropTargetKey === eventKey,
+            'drop-container': dropContainerKey === eventKey,
+            'drag-over': !disabled && dragOver,
+            'drag-over-gap-top': !disabled && dragOverGapTop,
+            'drag-over-gap-bottom': !disabled && dragOverGapBottom,
+            'filter-node':
+              filterTreeNode && filterTreeNode(convertNodePropsToEventData(this.props)),
+          })}
+          style={style}
+          onDragEnter={mergedDraggable ? this.onDragEnter : undefined}
+          onDragOver={mergedDraggable ? this.onDragOver : undefined}
+          onDragLeave={mergedDraggable ? this.onDragLeave : undefined}
+          onDrop={mergedDraggable ? this.onDrop : undefined}
+          onDragEnd={mergedDraggable ? this.onDragEnd : undefined}
+          onMouseMove={onMouseMove}
+          onContextMenu={event => {
+            event.preventDefault();
+            this.onRightClick(event, this.props?.data);
+          }}
+          {...dataOrAriaAttributeProps}
+        >
+          <Indent prefixCls={prefixCls} level={level} isStart={isStart} isEnd={isEnd} />
+          {this.renderSwitcher()}
+          {this.renderCheckbox()}
+          {this.renderSelector()}
+        </div>
+        {this.state.isNewNodeCreationActive && (
+          <>
+            <input
+              ref={this.newNodeRef}
+              type="text"
+              onKeyDown={e => {
+                switch (e.key) {
+                  case enterKey:
+                    if (typeof this.props.handleAddNewFile === 'function') {
+                      try {
+                        this.props.handleAddNewFile(this.newNodeRef.current?.value);
+                        this.setState({
+                          isNewNodeCreationActive: false,
+                          newNodeCreationError: null,
+                        });
+                      } catch (err) {
+                        this.setState({
+                          newNodeCreationError: err.message ? err.message : JSON.stringify(err),
+                        });
+                      }
+                    }
+                    break;
+                  case escapeKey:
+                    this.setState({ isNewNodeCreationActive: false, newNodeCreationError: null });
+                    break;
+                  default:
+                    return null;
+                }
+                return null;
+              }}
+              onMouseDown={event => {
+                // handle right click to block recursive action triggering.
+                if (event.button === 2) {
+                  event.preventDefault();
+                }
+              }}
+              defaultValue=""
+              onFocus={() => this.setState({ isInputOnFocus: true })}
+              onBlur={() => this.setState({ isInputOnFocus: false })}
+              // TODO - Improve the styling
+              style={{ marginLeft: '2.5rem', width: '10rem' }}
+            />
+            {this.state.newNodeCreationError && (
+              <div
+                className="input-error-container new_node-creation-error-container"
+                style={{
+                  position: 'fixed',
+                  top: this.newNodeRef.current?.getBoundingClientRect()?.top + 22 || 0,
+                  left: this.newNodeRef.current?.getBoundingClientRect()?.left || 0,
+                }}
+              >
+                {this.state.newNodeCreationError}
+              </div>
+            )}
+          </>
+        )}
+      </>
     );
   }
 }

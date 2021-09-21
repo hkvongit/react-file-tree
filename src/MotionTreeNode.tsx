@@ -16,6 +16,10 @@ interface MotionTreeNodeProps extends Omit<TreeNodeProps, 'domRef'> {
   motionType?: 'show' | 'hide';
 
   treeNodeRequiredProps: TreeNodeRequiredProps;
+  handleChildDel?: (nodeKey: string | number) => void;
+  handleNodeRename?: (newName: string | number) => void;
+  handleAddNewFile?: (nodeName: string | number) => void;
+  handleUploadNodeData?: (parentNodeKey: string | number) => void;
 }
 
 const MotionTreeNode: React.ForwardRefRenderFunction<HTMLDivElement, MotionTreeNodeProps> = (
@@ -31,6 +35,7 @@ const MotionTreeNode: React.ForwardRefRenderFunction<HTMLDivElement, MotionTreeN
     treeNodeRequiredProps,
     ...props
   },
+
   ref,
 ) => {
   const [visible, setVisible] = React.useState(true);
@@ -102,6 +107,10 @@ const MotionTreeNode: React.ForwardRefRenderFunction<HTMLDivElement, MotionTreeN
                   key={key}
                   isStart={isStart}
                   isEnd={isEnd}
+                  handleChildDel={props.handleChildDel}
+                  handleNodeRename={props.handleNodeRename}
+                  handleAddNewFile={props.handleAddNewFile}
+                  handleUploadNodeData={props.handleUploadNodeData}
                 />
               );
             })}
@@ -110,7 +119,12 @@ const MotionTreeNode: React.ForwardRefRenderFunction<HTMLDivElement, MotionTreeN
       </CSSMotion>
     );
   }
-  return <TreeNode domRef={ref} className={className} style={style} {...props} active={active} />;
+
+  return (
+    <>
+      <TreeNode domRef={ref} className={className} style={style} {...props} active={active} />
+    </>
+  );
 };
 
 MotionTreeNode.displayName = 'MotionTreeNode';
