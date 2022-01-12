@@ -132,7 +132,7 @@ function getAccessibilityPath(item: FlattenNode): string {
   return path;
 }
 
-const RefNodeList: React.RefForwardingComponent<NodeListRef, NodeListProps> = (props, ref) => {
+const RefNodeList: React.ForwardRefRenderFunction<NodeListRef, NodeListProps> = (props, ref) => {
   const {
     prefixCls,
     data,

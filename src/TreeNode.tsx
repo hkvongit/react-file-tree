@@ -458,6 +458,8 @@ class InternalTreeNode extends React.Component<InternalTreeNodeProps, TreeNodeSt
       context: { selectable: treeSelectable },
     } = this.props;
 
+    if (this.state.isRenameActive) return false;
+
     // Ignore when selectable is undefined or null
     if (typeof selectable === 'boolean') {
       return selectable;
@@ -649,7 +651,15 @@ class InternalTreeNode extends React.Component<InternalTreeNodeProps, TreeNodeSt
               }}
               defaultValue={title.toString()}
               onFocus={() => this.setState({ isInputOnFocus: true })}
-              onBlur={() => this.setState({ isInputOnFocus: false })}
+              onBlur={() => {
+                try {
+                  this.props.handleNodeRename(this.renameInputRef.current?.value);
+                  this.setState({ isRenameActive: false, renameActionError: null });
+                } catch (err) {
+                  this.setState({ isRenameActive: false, renameActionError: null });
+                }
+                this.setState({ isInputOnFocus: false });
+              }}
               required
               minLength={1}
               pattern="/[^a]/"
@@ -801,7 +811,20 @@ class InternalTreeNode extends React.Component<InternalTreeNodeProps, TreeNodeSt
               }}
               defaultValue=""
               onFocus={() => this.setState({ isInputOnFocus: true })}
-              onBlur={() => this.setState({ isInputOnFocus: false })}
+              onBlur={() => {
+                if (typeof this.props.handleAddNewFile === 'function') {
+                  try {
+                    this.props.handleAddNewFile(this.newNodeRef.current?.value);
+                    this.setState({
+                      isNewNodeCreationActive: false,
+                      newNodeCreationError: null,
+                    });
+                  } catch (err) {
+                    this.setState({ isNewNodeCreationActive: false, newNodeCreationError: null });
+                  }
+                }
+                this.setState({ isInputOnFocus: false });
+              }}
               // TODO - Improve the styling
               style={{ marginLeft: '2.5rem', width: '10rem' }}
             />
