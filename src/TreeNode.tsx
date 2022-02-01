@@ -649,8 +649,12 @@ class InternalTreeNode extends React.Component<InternalTreeNodeProps, TreeNodeSt
                 }
                 return null;
               }}
-              defaultValue={title.toString()}
-              onFocus={() => this.setState({ isInputOnFocus: true })}
+              defaultValue={data.defaultRenameTitle || title.toString()}
+              spellCheck="false"
+              onFocus={e => {
+                data.onInputFocus?.(e);
+                this.setState({ isInputOnFocus: true });
+              }}
               onBlur={() => {
                 try {
                   this.props.handleNodeRename(this.renameInputRef.current?.value);
@@ -671,6 +675,94 @@ class InternalTreeNode extends React.Component<InternalTreeNodeProps, TreeNodeSt
         )}
         {this.renderDropIndicator()}
       </span>
+    );
+  };
+
+  renderNodeAdder = () => {
+    const {
+      style,
+      data,
+      context: { prefixCls },
+    } = this.props;
+
+    const wrapClass = `${prefixCls}-node-content-wrapper`;
+
+    return (
+      <div className={classNames(data.childClass, `${prefixCls}-treenode`)} style={style}>
+        <span className={classNames(wrapClass, `${wrapClass}-normal`)}>
+          {data.childIcon && (
+            <span
+              className={classNames(
+                `${prefixCls}-iconEle`,
+                `${prefixCls}-icon__child`,
+                `${prefixCls}-icon__customize`,
+              )}
+            >
+              {data.childIcon}
+            </span>
+          )}
+
+          <input
+            ref={this.newNodeRef}
+            type="text"
+            onKeyDown={e => {
+              switch (e.key) {
+                case enterKey:
+                  if (typeof this.props.handleAddNewFile === 'function') {
+                    try {
+                      this.props.handleAddNewFile(this.newNodeRef.current?.value);
+                      this.setState({
+                        isNewNodeCreationActive: false,
+                        newNodeCreationError: null,
+                      });
+                    } catch (err) {
+                      this.setState({
+                        newNodeCreationError: err.message ? err.message : JSON.stringify(err),
+                      });
+                    }
+                  }
+                  break;
+                case escapeKey:
+                  this.setState({ isNewNodeCreationActive: false, newNodeCreationError: null });
+                  break;
+                default:
+                  return null;
+              }
+              return null;
+            }}
+            onMouseDown={event => {
+              // handle right click to block recursive action triggering.
+              if (event.button === 2) {
+                event.preventDefault();
+              }
+            }}
+            spellCheck="false"
+            defaultValue={data.defaultChildTitle || ''}
+            onFocus={e => {
+              data.onInputFocus?.(e);
+              this.setState({ isInputOnFocus: true });
+            }}
+            onBlur={() => {
+              if (typeof this.props.handleAddNewFile === 'function') {
+                try {
+                  this.props.handleAddNewFile(this.newNodeRef.current?.value);
+                  this.setState({
+                    isNewNodeCreationActive: false,
+                    newNodeCreationError: null,
+                  });
+                } catch (err) {
+                  this.setState({ isNewNodeCreationActive: false, newNodeCreationError: null });
+                }
+              }
+              this.setState({ isInputOnFocus: false });
+            }}
+          />
+
+          {this.state.newNodeCreationError && (
+            <div className="input-error-container">{this.state.newNodeCreationError}</div>
+          )}
+        </span>
+      </div>
     );
   };
 
@@ -773,75 +865,7 @@ class InternalTreeNode extends React.Component<InternalTreeNodeProps, TreeNodeSt
           {this.renderCheckbox()}
           {this.renderSelector()}
         </div>
-        {this.state.isNewNodeCreationActive && (
-          <>
-            <input
-              ref={this.newNodeRef}
-              type="text"
-              onKeyDown={e => {
-                switch (e.key) {
-                  case enterKey:
-                    if (typeof this.props.handleAddNewFile === 'function') {
-                      try {
-                        this.props.handleAddNewFile(this.newNodeRef.current?.value);
-                        this.setState({
-                          isNewNodeCreationActive: false,
-                          newNodeCreationError: null,
-                        });
-                      } catch (err) {
-                        this.setState({
-                          newNodeCreationError: err.message ? err.message : JSON.stringify(err),
-                        });
-                      }
-                    }
-                    break;
-                  case escapeKey:
-                    this.setState({ isNewNodeCreationActive: false, newNodeCreationError: null });
-                    break;
-                  default:
-                    return null;
-                }
-                return null;
-              }}
-              onMouseDown={event => {
-                // handle right click to block recursive action triggering.
-                if (event.button === 2) {
-                  event.preventDefault();
-                }
-              }}
-              defaultValue=""
-              onFocus={() => this.setState({ isInputOnFocus: true })}
-              onBlur={() => {
-                if (typeof this.props.handleAddNewFile === 'function') {
-                  try {
-                    this.props.handleAddNewFile(this.newNodeRef.current?.value);
-                    this.setState({
-                      isNewNodeCreationActive: false,
-                      newNodeCreationError: null,
-                    });
-                  } catch (err) {
-                    this.setState({ isNewNodeCreationActive: false, newNodeCreationError: null });
-                  }
-                }
-                this.setState({ isInputOnFocus: false });
-              }}
-              // TODO - Improve the styling
-              style={{ marginLeft: '2.5rem', width: '10rem' }}
-            />
-            {this.state.newNodeCreationError && (
-              <div
-                className="input-error-container new_node-creation-error-container"
-                style={{
-                  position: 'fixed',
-                  top: this.newNodeRef.current?.getBoundingClientRect()?.top + 22 || 0,
-                  left: this.newNodeRef.current?.getBoundingClientRect()?.left || 0,
-                }}
-              >
-                {this.state.newNodeCreationError}
-              </div>
-            )}
-          </>
-        )}
+        {this.state.isNewNodeCreationActive && this.renderNodeAdder()}
       </>
     );
   }

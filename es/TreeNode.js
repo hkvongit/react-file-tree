@@ -528,9 +528,14 @@ var InternalTreeNode = /*#__PURE__*/function (_React$Component) {
 
           return null;
         },
-        defaultValue: title.toString(),
-        onFocus: function onFocus() {
-          return _this.setState({
+        defaultValue: data.defaultRenameTitle || title.toString(),
+        spellCheck: "false",
+        onFocus: function onFocus(e) {
+          var _data$onInputFocus;
+
+          (_data$onInputFocus = data.onInputFocus) === null || _data$onInputFocus === void 0 ? void 0 : _data$onInputFocus.call(data, e);
+
+          _this.setState({
             isInputOnFocus: true
           });
         },
@@ -563,10 +568,107 @@ var InternalTreeNode = /*#__PURE__*/function (_React$Component) {
       }, _this.state.renameActionError)), _this.renderDropIndicator());
     };
 
-    _this.renderDropIndicator = function () {
+    _this.renderNodeAdder = function () {
       var _this$props6 = _this.props,
-          disabled = _this$props6.disabled,
-          eventKey = _this$props6.eventKey;
+          style = _this$props6.style,
+          data = _this$props6.data,
+          prefixCls = _this$props6.context.prefixCls;
+      var wrapClass = "".concat(prefixCls, "-node-content-wrapper");
+      return /*#__PURE__*/React.createElement("div", {
+        className: classNames(data.childClass, "".concat(prefixCls, "-treenode")),
+        style: style
+      }, /*#__PURE__*/React.createElement("span", {
+        className: classNames(wrapClass, "".concat(wrapClass, "-normal"))
+      }, data.childIcon && /*#__PURE__*/React.createElement("span", {
+        className: classNames("".concat(prefixCls, "-iconEle"), "".concat(prefixCls, "-icon__child"), "".concat(prefixCls, "-icon__customize"))
+      }, data.childIcon), /*#__PURE__*/React.createElement("input", {
+        ref: _this.newNodeRef,
+        type: "text",
+        onKeyDown: function onKeyDown(e) {
+          switch (e.key) {
+            case enterKey:
+              if (typeof _this.props.handleAddNewFile === 'function') {
+                try {
+                  var _this$newNodeRef$curr2;
+
+                  _this.props.handleAddNewFile((_this$newNodeRef$curr2 = _this.newNodeRef.current) === null || _this$newNodeRef$curr2 === void 0 ? void 0 : _this$newNodeRef$curr2.value);
+
+                  _this.setState({
+                    isNewNodeCreationActive: false,
+                    newNodeCreationError: null
+                  });
+                } catch (err) {
+                  _this.setState({
+                    newNodeCreationError: err.message ? err.message : JSON.stringify(err)
+                  });
+                }
+              }
+
+              break;
+
+            case escapeKey:
+              _this.setState({
+                isNewNodeCreationActive: false,
+                newNodeCreationError: null
+              });
+
+              break;
+
+            default:
+              return null;
+          }
+
+          return null;
+        },
+        onMouseDown: function onMouseDown(event) {
+          // handle right click to block recursive action triggering.
+          if (event.button === 2) {
+            event.preventDefault();
+          }
+        },
+        spellCheck: "false",
+        defaultValue: data.defaultChildTitle || '',
+        onFocus: function onFocus(e) {
+          var _data$onInputFocus2;
+
+          (_data$onInputFocus2 = data.onInputFocus) === null || _data$onInputFocus2 === void 0 ? void 0 : _data$onInputFocus2.call(data, e);
+
+          _this.setState({
+            isInputOnFocus: true
+          });
+        },
+        onBlur: function onBlur() {
+          if (typeof _this.props.handleAddNewFile === 'function') {
+            try {
+              var _this$newNodeRef$curr3;
+
+              _this.props.handleAddNewFile((_this$newNodeRef$curr3 = _this.newNodeRef.current) === null || _this$newNodeRef$curr3 === void 0 ? void 0 : _this$newNodeRef$curr3.value);
+
+              _this.setState({
+                isNewNodeCreationActive: false,
+                newNodeCreationError: null
+              });
+            } catch (err) {
+              _this.setState({
+                isNewNodeCreationActive: false,
+                newNodeCreationError: null
+              });
+            }
+          }
+
+          _this.setState({
+            isInputOnFocus: false
+          });
+        }
+      }), _this.state.newNodeCreationError && /*#__PURE__*/React.createElement("div", {
+        className: "input-error-container"
+      }, _this.state.newNodeCreationError)));
+    };
+
+    _this.renderDropIndicator = function () {
+      var _this$props7 = _this.props,
+          disabled = _this$props7.disabled,
+          eventKey = _this$props7.eventKey;
       var _this$props$context3 = _this.props.context,
           draggable = _this$props$context3.draggable,
           dropLevelOffset = _this$props$context3.dropLevelOffset,
@@ -628,32 +730,28 @@ var InternalTreeNode = /*#__PURE__*/function (_React$Component) {
     key: "render",
     value: function render() {
       var _classNames,
-          _this2 = this,
-          _this$newNodeRef$curr2,
-          _this$newNodeRef$curr3,
-          _this$newNodeRef$curr4,
-          _this$newNodeRef$curr5;
+          _this2 = this;
 
-      var _this$props7 = this.props,
-          eventKey = _this$props7.eventKey,
-          className = _this$props7.className,
-          style = _this$props7.style,
-          dragOver = _this$props7.dragOver,
-          dragOverGapTop = _this$props7.dragOverGapTop,
-          dragOverGapBottom = _this$props7.dragOverGapBottom,
-          isLeaf = _this$props7.isLeaf,
-          isStart = _this$props7.isStart,
-          isEnd = _this$props7.isEnd,
-          expanded = _this$props7.expanded,
-          selected = _this$props7.selected,
-          checked = _this$props7.checked,
-          halfChecked = _this$props7.halfChecked,
-          loading = _this$props7.loading,
-          domRef = _this$props7.domRef,
-          active = _this$props7.active,
-          data = _this$props7.data,
-          onMouseMove = _this$props7.onMouseMove,
-          otherProps = _objectWithoutProperties(_this$props7, _excluded);
+      var _this$props8 = this.props,
+          eventKey = _this$props8.eventKey,
+          className = _this$props8.className,
+          style = _this$props8.style,
+          dragOver = _this$props8.dragOver,
+          dragOverGapTop = _this$props8.dragOverGapTop,
+          dragOverGapBottom = _this$props8.dragOverGapBottom,
+          isLeaf = _this$props8.isLeaf,
+          isStart = _this$props8.isStart,
+          isEnd = _this$props8.isEnd,
+          expanded = _this$props8.expanded,
+          selected = _this$props8.selected,
+          checked = _this$props8.checked,
+          halfChecked = _this$props8.halfChecked,
+          loading = _this$props8.loading,
+          domRef = _this$props8.domRef,
+          active = _this$props8.active,
+          data = _this$props8.data,
+          onMouseMove = _this$props8.onMouseMove,
+          otherProps = _objectWithoutProperties(_this$props8, _excluded);
 
       var _this$props$context4 = this.props.context,
           prefixCls = _this$props$context4.prefixCls,
@@ -692,93 +790,7 @@ var InternalTreeNode = /*#__PURE__*/function (_React$Component) {
         level: level,
         isStart: isStart,
         isEnd: isEnd
-      }), this.renderSwitcher(), this.renderCheckbox(), this.renderSelector()), this.state.isNewNodeCreationActive && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("input", {
-        ref: this.newNodeRef,
-        type: "text",
-        onKeyDown: function onKeyDown(e) {
-          switch (e.key) {
-            case enterKey:
-              if (typeof _this2.props.handleAddNewFile === 'function') {
-                try {
-                  var _this2$newNodeRef$cur;
-
-                  _this2.props.handleAddNewFile((_this2$newNodeRef$cur = _this2.newNodeRef.current) === null || _this2$newNodeRef$cur === void 0 ? void 0 : _this2$newNodeRef$cur.value);
-
-                  _this2.setState({
-                    isNewNodeCreationActive: false,
-                    newNodeCreationError: null
-                  });
-                } catch (err) {
-                  _this2.setState({
-                    newNodeCreationError: err.message ? err.message : JSON.stringify(err)
-                  });
-                }
-              }
-
-              break;
-
-            case escapeKey:
-              _this2.setState({
-                isNewNodeCreationActive: false,
-                newNodeCreationError: null
-              });
-
-              break;
-
-            default:
-              return null;
-          }
-
-          return null;
-        },
-        onMouseDown: function onMouseDown(event) {
-          // handle right click to block recursive action triggering.
-          if (event.button === 2) {
-            event.preventDefault();
-          }
-        },
-        defaultValue: "",
-        onFocus: function onFocus() {
-          return _this2.setState({
-            isInputOnFocus: true
-          });
-        },
-        onBlur: function onBlur() {
-          if (typeof _this2.props.handleAddNewFile === 'function') {
-            try {
-              var _this2$newNodeRef$cur2;
-
-              _this2.props.handleAddNewFile((_this2$newNodeRef$cur2 = _this2.newNodeRef.current) === null || _this2$newNodeRef$cur2 === void 0 ? void 0 : _this2$newNodeRef$cur2.value);
-
-              _this2.setState({
-                isNewNodeCreationActive: false,
-                newNodeCreationError: null
-              });
-            } catch (err) {
-              _this2.setState({
-                isNewNodeCreationActive: false,
-                newNodeCreationError: null
-              });
-            }
-          }
-
-          _this2.setState({
-            isInputOnFocus: false
-          });
-        } // TODO - Improve the styling
-        ,
-        style: {
-          marginLeft: '2.5rem',
-          width: '10rem'
-        }
-      }), this.state.newNodeCreationError && /*#__PURE__*/React.createElement("div", {
-        className: "input-error-container new_node-creation-error-container",
-        style: {
-          position: 'fixed',
-          top: ((_this$newNodeRef$curr2 = this.newNodeRef.current) === null || _this$newNodeRef$curr2 === void 0 ? void 0 : (_this$newNodeRef$curr3 = _this$newNodeRef$curr2.getBoundingClientRect()) === null || _this$newNodeRef$curr3 === void 0 ? void 0 : _this$newNodeRef$curr3.top) + 22 || 0,
-          left: ((_this$newNodeRef$curr4 = this.newNodeRef.current) === null || _this$newNodeRef$curr4 === void 0 ? void 0 : (_this$newNodeRef$curr5 = _this$newNodeRef$curr4.getBoundingClientRect()) === null || _this$newNodeRef$curr5 === void 0 ? void 0 : _this$newNodeRef$curr5.left) || 0
-        }
-      }, this.state.newNodeCreationError)));
+      }), this.renderSwitcher(), this.renderCheckbox(), this.renderSelector()), this.state.isNewNodeCreationActive && this.renderNodeAdder());
     }
   }]);
 

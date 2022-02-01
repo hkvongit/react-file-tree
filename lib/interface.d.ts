@@ -15,6 +15,11 @@ export interface DataNode {
     /** Set style of TreeNode. This is not recommend if you don't have any force requirement */
     className?: string;
     style?: React.CSSProperties;
+    childIcon?: IconType;
+    childClass?: string;
+    defaultChildTitle?: string;
+    defaultRenameTitle?: string;
+    onInputFocus?: React.FocusEventHandler<HTMLInputElement>;
 }
 export interface EventDataNode extends DataNode {
     expanded: boolean;

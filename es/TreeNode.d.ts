@@ -99,6 +99,7 @@ declare class InternalTreeNode extends React.Component<InternalTreeNodeProps, Tr
     renderCheckbox: () => JSX.Element;
     renderIcon: () => JSX.Element;
     renderSelector: () => JSX.Element;
+    renderNodeAdder: () => JSX.Element;
     renderDropIndicator: () => React.ReactNode;
     render(): JSX.Element;
 }
